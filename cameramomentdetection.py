@@ -1,5 +1,11 @@
 import cv2
 import numpy as np
+import pyttsx3
+
+def speak(text):
+    engine = pyttsx3.init()
+    engine.say(text)
+    engine.runAndWait()
 
 def detect_camera_movement():
     # Open a connection to the default camera (usually the first camera detected)
@@ -50,32 +56,41 @@ def detect_camera_movement():
         mean_displacement = np.mean(displacement, axis=0)
 
         # Determine direction
+        directions = []
         if mean_displacement[0] > 2:
-            horizontal_direction = "right"
+            directions.append("right")
         elif mean_displacement[0] < -2:
-            horizontal_direction = "left"
-        else:
-            horizontal_direction = ""
+            directions.append("left")
 
         if mean_displacement[1] > 2:
-            vertical_direction = "up"
+            directions.append("up")
         elif mean_displacement[1] < -2:
-            vertical_direction = "down"
-        else:
-            vertical_direction = ""
+            directions.append("down")
 
-        # Combine horizontal and vertical directions
-        if horizontal_direction and vertical_direction:
-            direction = f"{horizontal_direction} and {vertical_direction}"
-        elif horizontal_direction:
-            direction = horizontal_direction
-        elif vertical_direction:
-            direction = vertical_direction
-        else:
-            direction = "steady"
+        # Calculate mean point size change for forward and backward movement
+        mean_sizes = []
+        for i in range(len(good_new)):
+            old_size = cv2.norm(good_old[i])
+            new_size = cv2.norm(good_new[i])
+            size_change = new_size - old_size
+            mean_sizes.append(size_change)
+        mean_size_change = np.mean(mean_sizes)
+
+        if mean_size_change > 2:
+            directions.append("backward")
+        elif mean_size_change < -2:
+            directions.append("forward")
+
+        if not directions:
+            directions.append("steady")
 
         # Display the direction on the frame
-        cv2.putText(frame, f"Camera is moving {direction}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        direction_text = ", ".join(directions)
+        cv2.putText(frame, f"Camera is moving {direction_text}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+        # Speak the direction
+        #speak(f"Camera is moving {direction_text}")
+
 
         # Display the frame
         cv2.imshow('Video', frame)
